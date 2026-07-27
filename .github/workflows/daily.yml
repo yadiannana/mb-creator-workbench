@@ -37,6 +37,7 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           WECHAT_ALBUM_URL: ${{ secrets.WECHAT_ALBUM_URL }}
+          STYLE_SAMPLES: ${{ secrets.STYLE_SAMPLES }}
         run: python scripts/update_content.py
 
       # 把生成的 content.json 提交回仓库，作为站内数据源（Pages 直接可读，无需 Gist 密钥）

@@ -34,6 +34,12 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 WECHAT_ALBUM_URL = os.environ.get("WECHAT_ALBUM_URL", "").strip()
+STYLE_SAMPLES = os.environ.get("STYLE_SAMPLES", "").strip()
+
+# 默认语感样例（用户未提供样稿时用于锚定调性；可在 Secrets 里用 STYLE_SAMPLES 覆盖）
+DEFAULT_STYLE = """例1：杨紫说"慢慢来，比较快"。我当妈后才懂，做自媒体也一样——不急着一条爆，先把今天的视频拍好，钱是顺便来的。
+例2：人民日报那句"允许一切发生"，放到带娃搞事业上也成立：今天没流量，允许；明天继续，也允许。
+例3：周星驰说"做人如果没有梦想，跟咸鱼有什么分别"。可我们当妈的梦想，常被尿布和房贷挤掉了——把它捡回来，就是账号的起点。"""
 
 # 北京时间 = UTC+8
 BJ = timezone(timedelta(hours=8))
@@ -145,16 +151,28 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
         hot_lines.append(f"- [{it.get('platform', '')}] {it['title']}（热度 {it.get('hot_value', '')}）")
     hot_block = "\n".join(hot_lines) or "（今日热榜暂未能获取）"
     wc_block = (wechat_text[:2000] or "（未提供微信专辑素材）")
+    style_block = (STYLE_SAMPLES.strip() or DEFAULT_STYLE)
 
-    return f"""你是一位专门服务“宝妈勇闯自媒体”赛道的内容策划与运营专家。
+    return f"""你是一位专为「宝妈情感共鸣 + 自媒体变现」赛道服务的内容策划与文案高手。
 
-请根据以下今日热点与参考素材，生成一份完整的内容规划，全部围绕“宝妈勇闯自媒体”展开。
+账号定位：面向宝妈群体，目标是通过自媒体赚到钱。内容调性——真诚、治愈、通透、有共鸣，像和闺蜜聊天，不卖弄、不说教，少用感叹号和鸡汤词。
+
+内容公式（核心方法）：
+从下面素材里挑出能打动宝妈的点，尤其是：
+1) 明星发言/采访金句（如杨紫、周星驰等近期刷屏的语录）；
+2) 热点歌曲；
+3) 人民日报式「人生感悟」类金句。
+第一步：把原句提炼成「一句很通透的话」。
+第二步：自然关联到「宝妈做自媒体的真实情绪 / 成长 / 怎么靠内容变现」，让观众觉得“这说的不就是我吗”。
 
 ## 今日热点（部分）
 {hot_block}
 
 ## 参考素材（微信文章/专辑摘要）
 {wc_block}
+
+## 风格样例（请模仿这种语感来写）
+{style_block}
 
 ## 输出要求
 请只输出一个 JSON 对象，不要任何 Markdown 或解释。JSON 结构如下：
@@ -168,9 +186,9 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
 
 要求：
 1. inspirations 10 条、insights 10 条、hotspots 10 条、math 10 条。
-2. 每条都要真实可用，避免空话，避免标题党。
-3. 人生感悟必须与“宝妈做自媒体”关联，不能只是鸡汤。
-4. hotspots 二创角度必须直接引用上面热点，并给出适合宝妈账号的改编。
+2. inspirations/hotspots 必须直接引用上面真实热点；insights 必须引用或化用“一句通透的话”。
+3. 所有内容都要落到「宝妈做自媒体」——情绪共鸣、成长、或怎么赚钱，不能空谈鸡汤。
+4. hotspots 的 copy 字段要像真人嘴里说出来的通透话（可基于明星发言/歌曲/人民日报金句做二创），避免“家人们谁懂啊”这类套话；imitate 给出口播起手、收尾、挂什么话题。
 5. math 是小学口算水平，10 题，混合加减乘，不要重复。
 6. 只输出 JSON，不要任何其他文字。"""
 
