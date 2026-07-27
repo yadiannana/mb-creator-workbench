@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FF5C8A">
+<title>宝妈创作工作台</title>
+<style>
+  :root{
+    --pink:#FF5C8A; --pink-dark:#E63E6D; --pink-soft:#FFE3EC; --pink-deep:#C92E5C;
+    --bg:#FFF5F8; --card:#FFFFFF; --text:#3A2B33; --muted:#9B8A92;
+    --green:#39C08A; --line:#F3E6EC; --radius:18px; --shadow:0 6px 20px rgba(255,92,138,.12);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    background:#E9E4E8; color:var(--text); line-height:1.55;
+    display:flex; justify-content:center;
+  }
+  /* 手机外壳，桌面预览也像手机 */
+  #phone{
+    width:100%; max-width:480px; min-height:100vh; background:var(--bg);
+    position:relative; box-shadow:0 0 40px rgba(0,0,0,.12); overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  /* 顶部栏 */
+  header{
+    background:linear-gradient(135deg,var(--pink),var(--pink-dark));
+    color:#fff; padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;
+    display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:30;
+    box-shadow:0 4px 14px rgba(230,62,109,.25);
+  }
+  .hamburger{background:rgba(255,255,255,.22); border:none; color:#fff; width:40px; height:40px;
+    border-radius:12px; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .hamburger:active{transform:scale(.94);}
+  header .title{font-size:17px; font-weight:700; flex:1;}
+  header .sub{font-size:12px; opacity:.85;}
+  .refresh-btn{background:rgba(255,255,255,.22); border:none; color:#fff; width:40px; height:40px;
+    border-radius:12px; font-size:18px; cursor:pointer; display:none; align-items:center; justify-content:center;}
+  .refresh-btn:active{transform:scale(.94);}
+  .refresh-btn.spin{animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* 抽屉 */
+  #overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:40; opacity:0; pointer-events:none; transition:opacity .25s;}
+  #overlay.show{opacity:1; pointer-events:auto;}
+  #drawer{
+    position:fixed; top:0; left:0; height:100%; width:268px; max-width:80vw;
+    background:#fff; z-index:50; transform:translateX(-100%); transition:transform .28s cubic-bezier(.4,0,.2,1);
+    display:flex; flex-direction:column; box-shadow:4px 0 24px rgba(0,0,0,.18);
+  }
+  #drawer.open{transform:translateX(0);}
+  .drawer-head{background:linear-gradient(135deg,var(--pink),var(--pink-dark)); color:#fff; padding:26px 20px 18px;}
+  .drawer-head .ava{width:54px; height:54px; border-radius:50%; background:rgba(255,255,255,.25);
+    display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:10px;}
+  .drawer-head .name{font-size:17px; font-weight:700;}
+  .drawer-head .role{font-size:12px; opacity:.9;}
+  .nav{padding:10px 12px; overflow-y:auto; flex:1;}
+  .nav-item{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px;
+    color:var(--text); font-size:15px; font-weight:600; cursor:pointer; margin-bottom:4px;}
+  .nav-item .ico{font-size:20px; width:26px; text-align:center;}
+  .nav-item:active{background:var(--pink-soft);}
+  .nav-item.active{background:var(--pink-soft); color:var(--pink-dark);}
+  .nav-badge{margin-left:auto; background:var(--pink); color:#fff; font-size:11px; padding:1px 8px; border-radius:10px;}
+
+  /* 主内容 */
+  main{flex:1; overflow-y:auto; padding:16px 14px calc(env(safe-area-inset-bottom) + 24px); -webkit-overflow-scrolling:touch;}
+  .page{display:none; animation:fade .25s;}
+  .page.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .card{background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:var(--shadow);}
+  .card-title{font-size:16px; font-weight:700; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
+  .card-title .dot{width:8px; height:8px; border-radius:50%; background:var(--pink);}
+  .card-sub{font-size:12px; color:var(--muted); margin:0 0 12px;}
+
+  .progress-wrap{margin:6px 0 14px;}
+  .progress-meta{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:6px;}
+  .progress-meta b{color:var(--pink-dark);}
+  .bar{height:14px; background:var(--line); border-radius:10px; overflow:hidden;}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--pink),var(--pink-dark)); border-radius:10px; width:0; transition:width .4s;}
+
+  .row{display:flex; align-items:center; gap:10px;}
+  .check{flex:0 0 auto; width:24px; height:24px; border-radius:8px; border:2px solid var(--pink);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; font-size:15px; background:#fff;}
+  .check.done{background:var(--pink);}
+  .check.done:after{content:"✓";}
+  .item-text{flex:1; font-size:15px; border:none; background:transparent; color:var(--text); padding:6px 0; outline:none; width:100%;}
+  .item-text.done{text-decoration:line-through; color:var(--muted);}
+  .del{flex:0 0 auto; border:none; background:transparent; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 6px;}
+
+  .input-line{display:flex; gap:8px; margin-top:10px;}
+  input[type=text], input[type=number], textarea, select{
+    width:100%; border:1.5px solid var(--line); border-radius:12px; padding:11px 12px; font-size:15px;
+    font-family:inherit; color:var(--text); background:#fff; outline:none; transition:border .2s;
+  }
+  input:focus, textarea:focus, select:focus{border-color:var(--pink);}
+  textarea{resize:vertical; min-height:64px; line-height:1.5;}
+  .btn{border:none; border-radius:12px; padding:11px 16px; font-size:15px; font-weight:700; cursor:pointer;
+    background:var(--pink); color:#fff; box-shadow:0 4px 12px rgba(255,92,138,.3); white-space:nowrap;}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:var(--pink-soft); color:var(--pink-dark); box-shadow:none;}
+  .btn.sm{padding:7px 12px; font-size:13px;}
+  .btn.green{background:var(--green); box-shadow:0 4px 12px rgba(57,192,138,.3);}
+
+  .tabs{display:flex; gap:8px; background:var(--pink-soft); padding:5px; border-radius:14px; margin-bottom:14px;}
+  .tab{flex:1; text-align:center; padding:9px 0; border-radius:10px; font-size:14px; font-weight:700; color:var(--pink-dark); cursor:pointer;}
+  .tab.active{background:#fff; box-shadow:var(--shadow);}
+
+  .tag{display:inline-block; background:var(--pink-soft); color:var(--pink-dark); font-size:12px; font-weight:700;
+    padding:2px 10px; border-radius:20px; margin-bottom:8px;}
+  .idea-desc{font-size:14px; color:#5A4750; margin:6px 0 12px;}
+  .plat-btns{display:flex; gap:8px;}
+  .plat-btns .btn{flex:1; padding:9px 0; font-size:13px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .stat{background:var(--pink-soft); border-radius:14px; padding:12px; text-align:center;}
+  .stat .n{font-size:22px; font-weight:800; color:var(--pink-dark);}
+  .stat .l{font-size:12px; color:var(--muted);}
+  .stat.eng .n{font-size:16px;}
+
+  .pill{display:inline-block; background:#FFF0F4; color:var(--pink-dark); border:1px solid var(--pink-soft);
+    font-size:12px; padding:3px 10px; border-radius:20px; margin:2px 4px 2px 0; cursor:pointer;}
+  .pill.active{background:var(--pink); color:#fff;}
+
+  .read-word{display:inline-block; padding:3px 6px; border-radius:8px; cursor:pointer; font-size:18px; margin:2px 0;}
+  .read-word:hover{background:var(--pink-soft);}
+  .read-word.cur{background:var(--pink); color:#fff;}
+  .read-word.spoken{background:var(--pink-soft);}
+
+  .mini{font-size:12px; color:var(--muted);}
+  .toast{position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:rgba(58,43,51,.95);
+    color:#fff; padding:11px 18px; border-radius:24px; font-size:14px; z-index:90; opacity:0; transition:.3s; pointer-events:none; max-width:80%;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:24px 0;}
+  .src-tag{font-size:11px; color:var(--muted); margin-top:6px;}
+  .scroll-x{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;}
+  .scroll-x .pill{white-space:nowrap;}
+  .danger{color:var(--pink-dark);}
+  .note{background:#FFF7FA; border:1px solid var(--pink-soft); border-radius:12px; padding:10px 12px; font-size:13px; color:#7A6A70; margin-bottom:12px;}
+  footer{text-align:center; font-size:11px; color:var(--muted); padding:6px 0 2px;}
+</style>
+</head>
+<body>
+<div id="phone">
+  <header>
+    <button class="hamburger" onclick="openDrawer()" aria-label="菜单">☰</button>
+    <div style="flex:1">
+      <div class="title" id="hdrTitle">每日计划</div>
+      <div class="sub" id="hdrSub"></div>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshContent()" title="刷新今日灵感">⟳</button>
+  </header>
+
+  <main id="main">
+    <!-- 每日计划 -->
+    <section class="page active" id="page-plan">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>今日进度</div>
+        <div class="card-sub" id="planDate"></div>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span id="planCount">0 / 0 已完成</span><b id="planPct">0%</b></div>
+          <div class="bar"><i id="planBar"></i></div>
+        </div>
+        <div id="planList"></div>
+        <div class="input-line">
+          <input type="text" id="planInput" placeholder="添加今日待办，例如：剪一条口播视频">
+          <button class="btn" onclick="addPlan()">添加</button>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+          <button class="btn ghost sm" onclick="resetPlan()">重置今日</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 选题 -->
+    <section class="page" id="page-topic">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTopic('idea')">每日灵感</div>
+        <div class="tab" onclick="switchTopic('insight')">人生感悟</div>
+      </div>
+      <div class="note" id="topicNote"></div>
+      <div id="ideaBox"></div>
+      <div id="insightBox"></div>
+    </section>
+
+    <!-- 爆款热点 -->
+    <section class="page" id="page-hot">
+      <div class="note" id="hotNote"></div>
+      <div id="hotList"></div>
+    </section>
+
+    <!-- 内容复盘 -->
+    <section class="page" id="page-review">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>今日数据</div>
+        <div class="card-sub" id="reviewDate"></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="n"><input type="number" id="rvPlay" min="0" placeholder="0" style="text-align:center;border:none;background:transparent;font-size:22px;font-weight:800;color:var(--pink-dark);width:80px"></div><div class="l">播放</div></div>
+          <div class="stat"><div class="n"><input type="number" id="rvLike" min="0" placeholder="0" style="text-align:center;border:none;background:transparent;font-size:22px;font-weight:800;color:var(--pink-dark);width:80px"></div><div class="l">点赞</div></div>
+          <div class="stat"><div class="n"><input type="number" id="rvComment" min="0" placeholder="0" style="text-align:center;border:none;background:transparent;font-size:22px;font-weight:800;color:var(--pink-dark);width:80px"></div><div class="l">评论</div></div>
+          <div class="stat"><div class="n"><input type="number" id="rvShare" min="0" placeholder="0" style="text-align:center;border:none;background:transparent;font-size:22px;font-weight:800;color:var(--pink-dark);width:80px"></div><div class="l">转发</div></div>
+        </div>
+        <div class="card-sub" style="margin-top:10px">互动率：<b id="rvRate" style="color:var(--pink-dark)">—</b></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>复盘记录</div>
+        <textarea id="rvHigh" placeholder="✨ 亮点：今天哪条内容表现好？为什么？"></textarea>
+        <textarea id="rvProb" placeholder="⚠️ 问题：哪里没做好？卡在哪？" style="margin-top:10px"></textarea>
+        <textarea id="rvOpt" placeholder="🚀 优化：明天怎么改？" style="margin-top:10px"></textarea>
+        <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+          <button class="btn green sm" onclick="saveReview()">保存复盘</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>历史复盘</div>
+        <div id="reviewHistory"></div>
+      </div>
+    </section>
+
+    <!-- 备忘录 -->
+    <section class="page" id="page-memo">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>备忘录</div>
+        <div class="card-sub">默认 5 行，可勾选、可加行</div>
+        <div id="memoList"></div>
+        <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+          <button class="btn ghost sm" onclick="addMemo()">＋ 加一行</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 速算练习 -->
+    <section class="page" id="page-math">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>速算设置</div>
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+          <select id="mathOp" style="flex:1; min-width:120px">
+            <option value="add">加 +</option>
+            <option value="sub">减 −</option>
+            <option value="mul">乘 ×</option>
+            <option value="mix">混合</option>
+          </select>
+          <select id="mathLv" style="flex:1; min-width:120px">
+            <option value="easy">简单</option>
+            <option value="mid">中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </div>
+        <div class="row" style="gap:8px; margin-top:10px;">
+          <button class="btn" onclick="genMath()">生成 10 题</button>
+          <button class="btn ghost" onclick="useGistMath()">用今日导入题</button>
+        </div>
+        <div class="note" style="margin-top:12px">📥 从微信专辑导入：把专辑里的题目粘贴到下面（每行一题，如 <b>12+34</b> 或 <b>12+34=46</b>），点“导入”。每日自动化也会把微信专辑题目同步进来。</div>
+        <textarea id="mathPaste" placeholder="12+34&#10;56-18&#10;7×8"></textarea>
+        <div class="row" style="justify-content:flex-end; margin-top:8px;">
+          <button class="btn ghost sm" onclick="importMath()">导入</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>答题</div>
+        <div id="mathQuiz"></div>
+        <div class="row" style="justify-content:space-between; margin-top:10px;">
+          <span class="mini" id="mathScore">得分：0 / 0</span>
+          <button class="btn green sm" onclick="checkMath()">交卷</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 英语练习 -->
+    <section class="page" id="page-en">
+      <div class="tabs">
+        <div class="tab active" onclick="switchEn('plan')">学习计划</div>
+        <div class="tab" onclick="switchEn('word')">单词</div>
+        <div class="tab" onclick="switchEn('grammar')">语法</div>
+        <div class="tab" onclick="switchEn('shadow')">影子跟读</div>
+      </div>
+      <div id="enPlanBox"></div>
+      <div id="enWordBox"></div>
+      <div id="enGrammarBox"></div>
+      <div id="enShadowBox"></div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="page" id="page-set">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>灵感数据源（Gist）</div>
+        <div class="card-sub">粘贴你的公开 Gist 原始地址（raw），网页每天早上/下午/晚上自动更新后在这里刷新读取。</div>
+        <input type="text" id="gistUrl" placeholder="https://gist.githubusercontent.com/用户名/ID/raw/content.json">
+        <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+          <button class="btn sm" onclick="saveGistUrl()">保存</button>
+          <button class="btn ghost sm" onclick="refreshContent()">立即刷新</button>
+        </div>
+        <div class="src-tag" id="gistStatus"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>数据管理</div>
+        <div class="card-sub">所有数据仅保存在本机浏览器。换手机或清缓存会丢失，建议重要内容自行备份。</div>
+        <div class="row" style="gap:8px;">
+          <button class="btn ghost sm" onclick="exportData()">导出备份</button>
+          <button class="btn ghost sm" onclick="importData()">导入备份</button>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:10px;">
+          <button class="btn sm danger" onclick="clearAll()">清空全部数据</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>关于</div>
+        <div class="card-sub">宝妈创作工作台 · 单文件离线版<br>离线也能用，联网刷新可获取每日 AI 灵感。</div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="foot"></footer>
+</div>
+
+<div id="overlay" onclick="closeDrawer()"></div>
+<nav id="drawer">
+  <div class="drawer-head">
+    <div class="ava">👩‍👧</div>
+    <div class="name">宝妈创作工作台</div>
+    <div class="role">宝妈勇闯自媒体 · 每日灵感</div>
+  </div>
+  <div class="nav" id="navList">
+    <div class="nav-item active" data-page="plan" onclick="navTo('plan')"><span class="ico">📅</span>每日计划</div>
+    <div class="nav-item" data-page="topic" onclick="navTo('topic')"><span class="ico">💡</span>选题灵感<span class="nav-badge" id="navTopic">10</span></div>
+    <div class="nav-item" data-page="hot" onclick="navTo('hot')"><span class="ico">🔥</span>爆款热点<span class="nav-badge" id="navHot">10</span></div>
+    <div class="nav-item" data-page="review" onclick="navTo('review')"><span class="ico">📊</span>内容复盘</div>
+    <div class="nav-item" data-page="memo" onclick="navTo('memo')"><span class="ico">📝</span>备忘录</div>
+    <div class="nav-item" data-page="math" onclick="navTo('math')"><span class="ico">🧮</span>速算练习</div>
+    <div class="nav-item" data-page="en" onclick="navTo('en')"><span class="ico">🔤</span>英语练习</div>
+    <div class="nav-item" data-page="set" onclick="navTo('set')"><span class="ico">⚙️</span>设置</div>
+  </div>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 工具函数 ============ */
+function $(s){return document.querySelector(s);}
+function $$(s){return document.querySelectorAll(s);}
+function esc(str){return String(str==null?'':str).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function save(k,v){try{localStorage.setItem('mb_'+k,JSON.stringify(v));}catch(e){}}
+function load(k,def){try{var r=localStorage.getItem('mb_'+k);return r==null?def:JSON.parse(r);}catch(e){return def;}}
+function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},1800);}
+function speak(text,lang){if(!('speechSynthesis'in window)){toast('当前环境不支持朗读');return;}
+  try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.lang=lang||'en-US';u.rate=0.9;window.speechSynthesis.speak(u);}catch(e){}}
+
+/* ============ 抽屉导航 ============ */
+var PAGE_TITLES={plan:'每日计划',topic:'选题灵感',hot:'爆款热点',review:'内容复盘',memo:'备忘录',math:'速算练习',en:'英语练习',set:'设置'};
+function openDrawer(){$('#drawer').classList.add('open');$('#overlay').classList.add('show');}
+function closeDrawer(){$('#drawer').classList.remove('open');$('#overlay').classList.remove('show');}
+function navTo(page){
+  $$('.page').forEach(function(p){p.classList.remove('active');});
+  $('#page-'+page).classList.add('active');
+  $$('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.page===page);});
+  $('#hdrTitle').textContent=PAGE_TITLES[page]||'工作台';
+  $('#hdrSub').textContent='';
+  $('#refreshBtn').style.display=(page==='topic'||page==='hot')?'flex':'none';
+  closeDrawer();
+  if(page==='plan')renderPlan();
+  if(page==='topic')renderTopic();
+  if(page==='hot')renderHot();
+  if(page==='review')renderReview();
+  if(page==='memo')renderMemo();
+  if(page==='en')renderEn();
+  window.scrollTo(0,0);
+}
+
+/* ============ 平台唤起（抖音/B站/小红书/夸克） ============ */
+function goPlatform(name){
+  var map={
+    douyin:{scheme:'snssdk1128://',web:'https://www.douyin.com'},
+    bili:{scheme:'bilibili://',web:'https://www.bilibili.com'},
+    xhs:{scheme:'xhsdiscover://',web:'https://www.xiaohongshu.com'},
+    quark:{scheme:'quark://',web:'https://www.quark.cn'}
+  };
+  var m=map[name];if(!m)return;
+  var isMobile=/Android|iPhone|iPad|iPod|HarmonyOS|MicroMessenger/i.test(navigator.userAgent);
+  if(isMobile){
+    var t=Date.now();
+    window.location.href=m.scheme;
+    setTimeout(function(){if(Date.now()-t<1500){window.open(m.web,'_blank');}},600);
+  }else{
+    window.open(m.web,'_blank');
+    toast('手机上点此可直接唤起 App');
+  }
+}
+
+/* ============ 每日计划 ============ */
+function getPlan(){var p=load('plan',null);if(!p||p.date!==today()){p={date:today(),items:defaultPlan()};save('plan',p);}return p;}
+function defaultPlan(){return [
+  {text:'看今日 10 条选题灵感并选 1 条拍',done:false},
+  {text:'跟一条爆款热点做二创',done:false},
+  {text:'复盘昨天数据，记 1 条优化',done:false},
+  {text:'发 1 条内容 + 互动回复评论',done:false},
+  {text:'背 10 个英语单词 / 影子跟读 5 分钟',done:false}
+];}
+function renderPlan(){
+  var p=getPlan();$('#planDate').textContent='📆 '+p.date+' · 带娃搞副业，每天一小步';
+  var list=$('#planList');list.innerHTML='';
+  p.items.forEach(function(it,i){
+    var d=document.createElement('div');d.className='row';
+    d.innerHTML='<div class="check'+(it.done?' done':'')+'" onclick="togglePlan('+i+')"></div>'+
+      '<input class="item-text'+(it.done?' done':'')+'" value="'+esc(it.text)+'" onchange="editPlan('+i+',this.value)">'+
+      '<button class="del" onclick="delPlan('+i+')">🗑</button>';
+    list.appendChild(d);
+  });
+  updatePlanBar();
+}
+function updatePlanBar(){
+  var p=getPlan();var done=p.items.filter(function(x){return x.done;}).length;
+  var total=p.items.length;var pct=total?Math.round(done/total*100):0;
+  $('#planCount').textContent=done+' / '+total+' 已完成';
+  $('#planPct').textContent=pct+'%';
+  $('#planBar').style.width=pct+'%';
+}
+function addPlan(){var v=$('#planInput').value.trim();if(!v)return;var p=getPlan();p.items.push({text:v,done:false});save('plan',p);$('#planInput').value='';renderPlan();}
+function togglePlan(i){var p=getPlan();p.items[i].done=!p.items[i].done;save('plan',p);renderPlan();}
+function editPlan(i,v){var p=getPlan();p.items[i].text=v;save('plan',p);}
+function delPlan(i){var p=getPlan();p.items.splice(i,1);save('plan',p);renderPlan();}
+function resetPlan(){save('plan',{date:today(),items:defaultPlan()});renderPlan();toast('已重置今日计划');}
+
+/* ============ 选题灵感 / 人生感悟 ============ */
+var topicMode='idea';
+function switchTopic(m){topicMode=m;$$('#page-topic .tab').forEach(function(t,i){t.classList.toggle('active',(m==='idea'?i===0:i===1));});renderTopic();}
+function renderTopic(){
+  var c=getContent();
+  $('#topicNote').innerHTML = c.fromGist
+    ? '✅ 已读取 '+c.date+' 的 AI 灵感（来源：你的 Gist）。点右上角 ⟳ 可刷新。'
+    : '📦 当前为内置示例数据。配置 Gist 后，每天会自动更新为 AI 生成的赛道灵感。';
+  if(topicMode==='idea'){
+    $('#ideaBox').style.display='block';$('#insightBox').style.display='none';
+    var box=$('#ideaBox');box.innerHTML='';
+    c.inspirations.forEach(function(it){
+      box.appendChild(ideaCard(it,'宝妈勇闯自媒体 · 选题灵感'));
+    });
+  }else{
+    $('#ideaBox').style.display='none';$('#insightBox').style.display='block';
+    var box=$('#insightBox');box.innerHTML='';
+    c.insights.forEach(function(it){
+      box.appendChild(ideaCard(it,'人生感悟 · 关联自媒体成长'));
+    });
+  }
+}
+function ideaCard(it,sub){
+  var d=document.createElement('div');d.className='card';
+  d.innerHTML='<div class="tag">#'+esc(it.tag||'灵感')+'</div>'+
+    '<div class="card-title" style="font-size:15px">'+esc(it.title)+'</div>'+
+    '<div class="idea-desc">'+esc(it.desc)+'</div>'+
+    '<div class="plat-btns">'+
+      '<button class="btn" onclick="goPlatform(\'douyin\')">抖音发布</button>'+
+      '<button class="btn ghost" onclick="goPlatform(\'xhs\')">小红书</button>'+
+      '<button class="btn ghost" onclick="goPlatform(\'bili\')">B站</button>'+
+    '</div>';
+  return d;
+}
+
+/* ============ 爆款热点 ============ */
+function renderHot(){
+  var c=getContent();
+  $('#hotNote').innerHTML = c.fromGist
+    ? '✅ '+c.date+' 热点已更新（AI 二创角度）。手机上点按钮可直接唤起对应 App。'
+    : '📦 内置示例热点。配置 Gist 后每天自动抓取抖音/全网热榜并改写。';
+  var box=$('#hotList');box.innerHTML='';
+  c.hotspots.forEach(function(h,i){
+    var d=document.createElement('div');d.className='card';
+    d.innerHTML='<div class="card-title" style="font-size:15px">🔥 '+esc(h.hot)+'</div>'+
+      '<div class="card-sub">改编角度</div><div class="idea-desc">'+esc(h.angle)+'</div>'+
+      '<div class="card-sub">学习爆火文案</div><div class="idea-desc">'+esc(h.copy)+'</div>'+
+      '<div class="card-sub">深度模仿</div><div class="idea-desc">'+esc(h.imitate)+'</div>'+
+      '<div class="plat-btns">'+
+        '<button class="btn" onclick="goPlatform(\'douyin\')">抖音</button>'+
+        '<button class="btn ghost" onclick="goPlatform(\'bili\')">B站</button>'+
+        '<button class="btn ghost" onclick="goPlatform(\'quark\')">夸克</button>'+
+      '</div>';
+    box.appendChild(d);
+  });
+}
+
+/* ============ 内容复盘 ============ */
+function getReview(date){date=date||today();var all=load('reviews',{});return all[date]||{play:0,like:0,comment:0,share:0,high:'',prob:'',opt:''};}
+function renderReview(){
+  $('#reviewDate').textContent='📆 '+today();
+  var r=getReview();
+  $('#rvPlay').value=r.play||'';$('#rvLike').value=r.like||'';$('#rvComment').value=r.comment||'';$('#rvShare').value=r.share||'';
+  $('#rvHigh').value=r.high||'';$('#rvProb').value=r.prob||'';$('#rvOpt').value=r.opt||'';
+  calcRate();
+  ['rvPlay','rvLike','rvComment','rvShare'].forEach(function(id){$('#'+id).addEventListener('input',calcRate);});
+  renderReviewHistory();
+}
+function calcRate(){
+  var p=+$('#rvPlay').value||0,l=+$('#rvLike').value||0,c=+$('#rvComment').value||0,s=+$('#rvShare').value||0;
+  var inter=l+c+s;var rate=p?((inter/p)*100).toFixed(2)+'%':'—';
+  $('#rvRate').textContent=rate+'（互动 '+inter+'）';
+}
+function saveReview(){
+  var r={play:+$('#rvPlay').value||0,like:+$('#rvLike').value||0,comment:+$('#rvComment').value||0,share:+$('#rvShare').value||0,
+    high:$('#rvHigh').value,prob:$('#rvProb').value,opt:$('#rvOpt').value};
+  var all=load('reviews',{});all[today()]=r;save('reviews',all);
+  toast('复盘已保存 ✓');renderReviewHistory();
+}
+function renderReviewHistory(){
+  var all=load('reviews',{});var keys=Object.keys(all).filter(function(k){return k!==today();}).sort().reverse();
+  var box=$('#reviewHistory');
+  if(!keys.length){box.innerHTML='<div class="empty">还没有历史复盘</div>';return;}
+  box.innerHTML='';
+  keys.slice(0,10).forEach(function(k){
+    var r=all[k];var d=document.createElement('div');d.className='card';d.style.marginBottom='10px';
+    d.innerHTML='<div class="card-sub">📆 '+k+'</div>'+
+      '<div class="mini">播放 '+r.play+' · 赞 '+r.like+' · 评 '+r.comment+' · 转 '+r.share+'</div>'+
+      (r.high?'<div class="mini" style="margin-top:6px">✨ '+esc(r.high)+'</div>':'')+
+      (r.opt?'<div class="mini" style="margin-top:4px">🚀 '+esc(r.opt)+'</div>':'');
+    box.appendChild(d);
+  });
+}
+
+/* ============ 备忘录 ============ */
+function getMemo(){var m=load('memo',null);if(!m||!m.length)m=defaultMemo();return m;}
+function defaultMemo(){return [{},{},{},{},{}].map(function(){return{text:'',done:false};});}
+function renderMemo(){
+  var m=getMemo();var box=$('#memoList');box.innerHTML='';
+  m.forEach(function(it,i){
+    var d=document.createElement('div');d.className='row';
+    d.innerHTML='<div class="check'+(it.done?' done':'')+'" onclick="toggleMemo('+i+')"></div>'+
+      '<input class="item-text'+(it.done?' done':'')+'" placeholder="记点什么…" value="'+esc(it.text)+'" onchange="editMemo('+i+',this.value)">'+
+      '<button class="del" onclick="delMemo('+i+')">🗑</button>';
+    box.appendChild(d);
+  });
+}
+function toggleMemo(i){var m=getMemo();m[i].done=!m[i].done;save('memo',m);renderMemo();}
+function editMemo(i,v){var m=getMemo();m[i].text=v;save('memo',m);}
+function addMemo(){var m=getMemo();m.push({text:'',done:false});save('memo',m);renderMemo();}
+function delMemo(i){var m=getMemo();m.splice(i,1);if(m.length<1)m=defaultMemo();save('memo',m);renderMemo();}
+
+/* ============ 速算练习 ============ */
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function makeProblem(op,lv){
+  var a,b,sign,ans;
+  if(op==='mix')op=['add','sub','mul'][rnd(0,2)];
+  if(op==='add'){var max=lv==='easy'?20:lv==='mid'?99:999;a=rnd(1,max);b=rnd(1,max);sign='+';ans=a+b;}
+  else if(op==='sub'){var max2=lv==='easy'?20:lv==='mid'?99:999;a=rnd(1,max2);b=rnd(1,a);sign='−';ans=a-b;}
+  else{var m1=lv==='easy'?9:lv==='mid'?12:19;var m2=lv==='easy'?9:lv==='mid'?12:19;a=rnd(2,m1);b=rnd(2,m2);sign='×';ans=a*b;}
+  return {q:a+' '+sign+' '+b,ans:ans};
+}
+function genMath(){
+  var op=$('#mathOp').value,lv=$('#mathLv').value;var arr=[];
+  for(var i=0;i<10;i++)arr.push(makeProblem(op,lv));
+  save('math_cur',arr);save('math_src','gen');renderMath();toast('已生成 10 题');
+}
+function useGistMath(){
+  var c=getContent();
+  if(c.math&&c.math.length){save('math_cur',c.math.map(function(x){return {q:x,ans:null};}));save('math_src','gist');
+    renderMath();toast('已载入今日导入题');}
+  else{toast('今日 Gist 还没有速算题');}
+}
+function importMath(){
+  var txt=$('#mathPaste').value.trim();if(!txt){toast('先粘贴题目');return;}
+  var lines=txt.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var arr=lines.map(function(line){
+    var norm=line.replace(/[xX×]/g,'*').replace(/[÷]/g,'/');
+    var m=norm.match(/^([0-9+*/-]+)\s*=?\s*(.*)$/);
+    if(m){
+      return {q:m[1].replace(/\*/g,'×').replace(/\//g,'÷').trim(),ans:null};
+    }
+    return {q:line,ans:null};
+  });
+  save('math_cur',arr);save('math_src','paste');renderMath();toast('已导入 '+arr.length+' 题');
+}
+function renderMath(){
+  var arr=load('math_cur',[]);var box=$('#mathQuiz');box.innerHTML='';
+  if(!arr.length){box.innerHTML='<div class="empty">点上方“生成 10 题”或粘贴导入</div>';$('#mathScore').textContent='得分：0 / 0';return;}
+  arr.forEach(function(p,i){
+    var d=document.createElement('div');d.className='row';d.style.marginBottom='8px';
+    d.innerHTML='<span style="flex:1;font-size:16px;font-weight:600">'+esc(p.q)+' =</span>'+
+      '<input type="number" id="mq'+i+'" style="max-width:110px" placeholder="?">'+
+      '<span id="mr'+i+'" style="width:22px;text-align:center"></span>';
+    box.appendChild(d);
+  });
+  $('#mathScore').textContent='得分：0 / '+arr.length;
+}
+function checkMath(){
+  var arr=load('math_cur',[]);if(!arr.length)return;
+  var right=0;
+  arr.forEach(function(p,i){
+    var inp=$('#mq'+i);var got=inp.value.trim();var mr=$('#mr'+i);
+    if(got===''){mr.textContent='';return;}
+    if(p.ans==null){mr.textContent='➖';mr.style.color='#9B8A92';return;}
+    if(+got===p.ans){right++;mr.textContent='✓';mr.style.color='#39C08A';}
+    else{mr.textContent='✗';mr.style.color='#E63E6D';}
+  });
+  $('#mathScore').textContent='得分：'+right+' / '+arr.length;
+  if(arr.every(function(p){return p.ans!=null;}))toast('得分 '+right+' / '+arr.length);
+}
+
+/* ============ 英语练习 ============ */
+var enMode='plan';
+var EN_PLAN=[
+  {w:'第1周 · 开口',t:'每天 10 个高频词 + 跟读 3 句，先敢说',done:false},
+  {w:'第2周 · 听力',t:'影子跟读 5 分钟，模仿语音语调',done:false},
+  {w:'第3周 · 语法',t:'搞懂 5 个核心句型（主谓宾/there be）',done:false},
+  {w:'第4周 · 输出',t:'用学到的话录 1 条英文口播发账号',done:false},
+  {w:'第5周+ · 习惯',t:'每天 15 分钟，词汇量破 500',done:false}
+];
+var EN_WORDS=[
+  {en:'mother',zh:'妈妈'},{en:'baby',zh:'宝宝'},{en:'love',zh:'爱'},{en:'home',zh:'家'},
+  {en:'work',zh:'工作'},{en:'time',zh:'时间'},{en:'happy',zh:'开心'},{en:'share',zh:'分享'},
+  {en:'grow',zh:'成长'},{en:'dream',zh:'梦想'}
+];
+var EN_GRAMMAR=[
+  {t:'主谓宾',d:'I (主) make (谓) videos (宾). 我拍视频。'},
+  {t:'There be',d:'There is a baby at home. 家里有个宝宝。'},
+  {t:'现在进行',d:'I am learning English. 我正在学英语。'},
+  {t:'情态can',d:'I can do it. 我能做到。'},
+  {t:'一般将来',d:'I will post tomorrow. 我明天发。'}
+];
+var EN_SHADOW=[
+  'I am a mom and I am building my own business.',
+  'Every small step counts, keep going.',
+  'Sharing my life helps other moms too.',
+  'I learn English a little every day.'
+];
+function switchEn(m){
+  enMode=m;
+  var tabs=$$('#page-en .tab');
+  tabs[0].classList.toggle('active',m==='plan');
+  tabs[1].classList.toggle('active',m==='word');
+  tabs[2].classList.toggle('active',m==='grammar');
+  tabs[3].classList.toggle('active',m==='shadow');
+  renderEn();
+}
+function renderEn(){
+  $('#enPlanBox').style.display=enMode==='plan'?'block':'none';
+  $('#enWordBox').style.display=enMode==='word'?'block':'none';
+  $('#enGrammarBox').style.display=enMode==='grammar'?'block':'none';
+  $('#enShadowBox').style.display=enMode==='shadow'?'block':'none';
+  if(enMode==='plan'){
+    var plan=load('en_plan',EN_PLAN);var box=$('#enPlanBox');box.innerHTML='';
+    plan.forEach(function(p,i){
+      var d=document.createElement('div');d.className='card';d.style.marginBottom='10px';
+      d.innerHTML='<div class="row"><div class="check'+(p.done?' done':'')+'" onclick="toggleEnPlan('+i+')"></div>'+
+        '<div style="flex:1"><div style="font-weight:700">'+esc(p.w)+'</div><div class="mini">'+esc(p.t)+'</div></div></div>';
+      box.appendChild(d);
+    });
+    var tip=document.createElement('div');tip.className='note';tip.textContent='成年人零基础：先开口、再听力、后语法，最后输出。贵在每天 15 分钟。';
+    box.appendChild(tip);
+  }
+  if(enMode==='word'){
+    var words=load('en_words',EN_WORDS);var box=$('#enWordBox');box.innerHTML='';
+    var card=document.createElement('div');card.className='card';
+    var h=document.createElement('div');h.className='card-title';h.innerHTML='<span class="dot"></span>点单词听发音';
+    card.appendChild(h);
+    words.forEach(function(w){
+      var d=document.createElement('div');d.className='row';d.style.marginBottom='8px';
+      d.innerHTML='<span class="read-word" onclick="speak(\''+esc(w.en)+'\')">'+esc(w.en)+'</span>'+
+        '<span class="mini" style="flex:1">'+esc(w.zh)+'</span>'+
+        '<button class="btn ghost sm" onclick="speak(\''+esc(w.en)+'\')">🔊</button>';
+      card.appendChild(d);
+    });
+    box.appendChild(card);
+    var add=document.createElement('div');add.className='card';
+    add.innerHTML='<div class="card-sub">添加自定义单词（英文,中文）</div>'+
+      '<div class="input-line"><input type="text" id="enAddWord" placeholder="例如：family,家庭">'+
+      '<button class="btn" onclick="addWord()">加</button></div>';
+    box.appendChild(add);
+  }
+  if(enMode==='grammar'){
+    var g=load('en_grammar',EN_GRAMMAR);var box=$('#enGrammarBox');box.innerHTML='';
+    g.forEach(function(x){
+      var d=document.createElement('div');d.className='card';d.style.marginBottom='10px';
+      d.innerHTML='<div class="tag">'+esc(x.t)+'</div><div class="idea-desc">'+esc(x.d)+'</div>';
+      box.appendChild(d);
+    });
+  }
+  if(enMode==='shadow'){
+    var box=$('#enShadowBox');box.innerHTML='';
+    var card=document.createElement('div');card.className='card';
+    card.innerHTML='<div class="card-title"><span class="dot"></span>影子跟读</div>'+
+      '<div class="card-sub">点整句播放，或点“逐字跟读”逐词高亮朗读；点任意单词单独听。</div>';
+    EN_SHADOW.forEach(function(s,idx){
+      var p=document.createElement('div');p.style.margin='10px 0';
+      var words=s.split(' ');
+      var line=document.createElement('div');
+      words.forEach(function(w){
+        var sp=document.createElement('span');sp.className='read-word';sp.textContent=w;
+        sp.onclick=function(){speak(w);};
+        line.appendChild(sp);line.appendChild(document.createTextNode(' '));
+      });
+      p.appendChild(line);
+      var btns=document.createElement('div');btns.className='row';btns.style.gap='8px';btns.style.marginTop='6px';
+      btns.innerHTML='<button class="btn ghost sm" onclick="speak(\''+esc(s)+'\')">▶ 整句</button>'+
+        '<button class="btn ghost sm" onclick="shadowRead('+idx+',this)">🗣 逐字跟读</button>';
+      p.appendChild(btns);
+      card.appendChild(p);
+    });
+    box.appendChild(card);
+    var search=document.createElement('div');search.className='card';
+    search.innerHTML='<div class="card-title"><span class="dot"></span>素材搜索（查单词/例句）</div>'+
+      '<div class="input-line"><input type="text" id="enSearch" placeholder="输入英文单词，如 happy">'+
+      '<button class="btn" onclick="searchWord()">搜索</button></div>'+
+      '<div id="enSearchRes"></div>';
+    box.appendChild(search);
+  }
+}
+function toggleEnPlan(i){var p=load('en_plan',EN_PLAN);p[i].done=!p[i].done;save('en_plan',p);renderEn();}
+function addWord(){var v=$('#enAddWord').value.trim();if(!v)return;var parts=v.split(/[,，]/);var en=parts[0].trim(),zh=(parts[1]||'').trim();var words=load('en_words',EN_WORDS);words.push({en:en,zh:zh});save('en_words',words);$('#enAddWord').value='';renderEn();toast('已添加');}
+function shadowRead(idx,btn){
+  var s=EN_SHADOW[idx];var words=s.split(' ');var spans=btn.parentNode.parentNode.querySelectorAll('.read-word');
+  btn.disabled=true;
+  var i=0;
+  function next(){
+    if(i>0)spans[i-1].classList.remove('cur');
+    if(i>=words.length){if(spans.length)spans[spans.length-1].classList.remove('cur');btn.disabled=false;return;}
+    spans[i].classList.add('cur');speak(words[i]);i++;
+    setTimeout(next,900);
+  }
+  next();
+}
+function searchWord(){
+  var w=$('#enSearch').value.trim().toLowerCase();if(!w)return;
+  var box=$('#enSearchRes');box.innerHTML='<div class="mini">查询中…</div>';
+  fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w))
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(Array.isArray(data)&&data[0]){
+        var ph=data[0].phonetic||(data[0].phonetics&&data[0].phonetics[0]&&data[0].phonetics[0].text)||'';
+        var defs=[];
+        (data[0].meanings||[]).forEach(function(m){
+          (m.definitions||[]).slice(0,2).forEach(function(d){
+            defs.push('• '+esc(m.partOfSpeech||'')+'：'+esc(d.definition)+(d.example?'（'+esc(d.example)+'）':''));
+          });
+        });
+        box.innerHTML='<div class="card" style="margin-top:8px"><div style="font-weight:700;font-size:17px">'+esc(w)+' <span class="mini">'+esc(ph)+'</span> <button class="btn ghost sm" onclick="speak(\''+esc(w)+'\')">🔊</button></div>'+
+          '<div class="idea-desc">'+defs.join('<br>')+'</div></div>';
+      }else{box.innerHTML='<div class="mini">没查到，换个词试试～</div>';}
+    })
+    .catch(function(){box.innerHTML='<div class="mini">网络不可用，已离线。可点单词听发音。</div>';});
+}
+
+/* ============ Gist 内容读取 ============ */
+var DEFAULT_GIST_URL='https://gist.githubusercontent.com/yadiannana/82c583792b9edf85bacc67cdb4c7105a/raw/content.json'; // 部署后自动读取这个公开 Gist
+function contentSrc(){return load('gist_url','')||DEFAULT_GIST_URL||'./content.json';}
+function defaultContent(){
+  return {
+    date:today(), fromGist:false,
+    inspirations:[
+      {tag:'勇气',title:'当妈后我为什么要做自媒体',desc:'分享从全职妈妈到创作者的转折点，真实故事最容易引发共鸣，建议拍一段对镜头说话的口播。'},
+      {tag:'时间管理',title:'一个人带娃也能搞副业吗',desc:'用碎片时间做账号的真实记录：娃睡了我就剪视频，给同类妈妈一个可复制的样本。'},
+      {tag:'心态',title:'被说“不务正业”后我这样回',desc:'把负面评价当成流量素材，温柔坚定地表达自己，吸引同频宝妈。'},
+      {tag:'变现',title:'宝妈号第一个 100 块怎么来的',desc:'复盘第一笔收益来源（带货/商单/引流），用数据说话增强信任。'},
+      {tag:'带娃',title:'带娃间隙的 3 个拍摄机位',desc:'手机支架+厨房/客厅/推车三个场景，展示低成本也能出片。'},
+      {tag:'成长',title:'30 岁重新学一项技能是什么体验',desc:'把学英语/剪辑的过程拍成系列，陪伴感强，完播率高。'},
+      {tag:'情感',title:'写给一年前的自己',desc:'用对比式叙事（从前vs现在），戳中宝妈情绪点。'},
+      {tag:'干货',title:'新手做号别踩的 5 个坑',desc:'避坑清单类内容收藏率高，适合做封面大字标题。'},
+      {tag:'日常',title:'普通一天 vlog 也能火？',desc:'真实记录带娃+搞事业的一天，平淡但有力量。'},
+      {tag:'人设',title:'我的账号名和头像怎么定的',desc:'讲人设搭建思路，给新手做号的参考。'}
+    ],
+    insights:[
+      {tag:'坚持',title:'慢一点也没关系',desc:'自媒体不是百米冲刺。关联自媒体：今天没爆，但账号在长肌肉，方向对了就别停。'},
+      {tag:'接纳',title:'不完美也可以开始',desc:'第一条视频很糙？关联自媒体：真实比精致更动人，先完成再完美。'},
+      {tag:'专注',title:'少看别人，多看自己',desc:'焦虑来自比较。关联自媒体：盯住自己的数据曲线，每周进步一点点就赢。'},
+      {tag:'热爱',title:'热爱是熬过瓶颈的光',desc:'关联自媒体：把带娃的琐碎变成内容灵感，热爱会替你续航。'},
+      {tag:'成长',title:'妈妈也可以是学习者',desc:'我在学英语、学剪辑。关联自媒体：展示学习过程本身就有流量。'},
+      {tag:'勇气的',title:'怕被熟人看到怎么办',desc:'关联自媒体：把羞耻感拍出来，反而圈粉，真诚是最高级的运营。'},
+      {tag:'平衡',title:'带娃和搞事业不是对立',desc:'关联自媒体：用的时间块管理，给宝妈一个“我也可以”的信念。'},
+      {tag:'价值',title:'你经历的就是别人的答案',desc:'关联自媒体：普通妈妈的日常，对另一个妈妈可能就是救命稻草。'},
+      {tag:'长期',title:'做难而正确的事',desc:'关联自媒体：不追热点投机，沉淀人设，时间会奖励长期主义者。'},
+      {tag:'感恩',title:'谢谢愿意听我说话的你',desc:'关联自媒体：定期和粉丝“对话”，把账号做成有温度的小圈子。'}
+    ],
+    hotspots:[
+      {hot:'某明星带娃综艺爆了',angle:'宝妈视角解读：明星带娃vs普通妈妈带娃的差距与共鸣点',copy:'同样是带娃，差距咋就这么大？但普通妈妈的韧性更戳人。',imitate:'用“明星带娃名场面+我的带娃真实瞬间”对比剪辑，结尾点题：每个妈妈都在发光。'},
+      {hot:'全网都在挑战 XX 手势舞',angle:'带娃版手势舞，宝宝出镜更吸睛',copy:'带娃跳这个也太治愈了，评论区全是妈妈。',imitate:'抱着娃或牵着娃拍同款，加字幕“宝妈勇闯自媒体 day N”。'},
+      {hot:'一条“普通人逆袭”视频刷屏',angle:'宝妈逆袭叙事：从焦虑到做账号赚到第一笔',copy:'普通妈妈也能翻盘，关键是敢开始。',imitate:'三段式结构：低谷→行动→小成果，配励志BGM。'},
+      {hot:'某歌曲突然翻红',angle:'用这首歌做带娃日常 bgm，情绪拉满',copy:'一听到这歌就想到当妈的那些瞬间。',imitate:'卡点剪辑宝宝成长片段，文案走心。'},
+      {hot:'职场妈妈话题上热搜',angle:'全职/职场妈妈都逃不开的 3 个问题',copy:'不管上不上班，妈妈的累都看得见。',imitate:'列清单式口播，结尾抛互动问题引评论。'},
+      {hot:'省钱攻略类内容走红',angle:'带娃省钱 10 招，宝妈必看',copy:'当妈后真的会精打细算，这篇太实用。',imitate:'实拍+清单字幕，强调“亲测有效”。'},
+      {hot:'某博主停更引发讨论',angle:'我也曾想放弃，但…',copy:'做自媒体真的会想退圈，但你们拉住了我。',imitate:'真诚自白式口播，强化人设温度。'},
+      {hot:'家庭教育新政策热搜',angle:'政策跟普通宝妈有啥关系',copy:'别慌，一条说清对咱们带娃的影响。',imitate:'用大白话解读+画重点，做“宝妈看得懂”的科普。'},
+      {hot:'治愈系风景视频爆了',angle:'带娃累了的瞬间，看看窗外',copy:'当妈也需要喘口气，这片刻属于我。',imitate:'窗边/阳台实拍+轻音乐+短文案，做情绪价值。'},
+      {hot:'“妈妈语录”刷屏',angle:'我妈/我说过的带娃金句',copy:'当妈后才懂的这些话，句句扎心又温暖。',imitate:'字幕卡点+生活原声，引发转发。'}
+    ],
+    math:['12+34','56-18','7×8','23+45','90-37','6×9','15+28','64-29','4×7','33+52']
+  };
+}
+function getContent(){
+  var c=load('content',null);
+  if(c&&c.date===today()&&c.fromGist)return c;
+  if(c&&c.fromGist)return c; // 允许跨天显示最近一次Gist
+  return load('content_cache',defaultContent());
+}
+function refreshContent(){
+  var url=contentSrc();
+  var btn=$('#refreshBtn');if(btn)btn.classList.add('spin');
+  if(!url){if(btn)btn.classList.remove('spin');save('content_cache',defaultContent());renderTopic();renderHot();toast('未配置数据源，显示内置示例');return;}
+  fetch(url+'?t='+Date.now())
+    .then(function(r){if(!r.ok)throw new Error('http');return r.json();})
+    .then(function(data){
+      data.fromGist=true;
+      // 兼容字段
+      data.inspirations=data.inspirations||defaultContent().inspirations;
+      data.insights=data.insights||defaultContent().insights;
+      data.hotspots=data.hotspots||defaultContent().hotspots;
+      data.math=data.math||defaultContent().math;
+      save('content',data);save('content_cache',data);
+      if(btn)btn.classList.remove('spin');
+      renderTopic();renderHot();toast('已更新 '+data.date+' 的灵感 ✓');
+    })
+    .catch(function(){
+      if(btn)btn.classList.remove('spin');
+      save('content_cache',load('content',defaultContent()));
+      renderTopic();renderHot();toast('刷新失败，显示已有/示例数据');
+    });
+}
+function saveGistUrl(){
+  var v=$('#gistUrl').value.trim();save('gist_url',v);
+  $('#gistStatus').textContent=v?'已保存，点“立即刷新”测试。':'已清空。';
+  toast('Gist 地址已保存');
+}
+
+/* ============ 设置：备份/清空 ============ */
+function exportData(){
+  var keys=['plan','reviews','memo','math_cur','math_src','en_plan','en_words','en_grammar','content','content_cache','gist_url'];
+  var out={};keys.forEach(function(k){out[k]=load(k,null);});
+  var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='宝妈工作台备份.json';a.click();
+  toast('已导出备份');
+}
+function importData(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=function(){
+    var f=inp.files[0];if(!f)return;var rd=new FileReader();
+    rd.onload=function(){
+      try{var o=JSON.parse(rd.result);Object.keys(o).forEach(function(k){if(o[k]!=null)save(k,o[k]);});
+        toast('导入成功，刷新查看');}catch(e){toast('文件格式不对');}
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+function clearAll(){
+  if(!confirm('确定清空本机全部数据？此操作不可恢复。'))return;
+  ['plan','reviews','memo','math_cur','math_src','en_plan','en_words','en_grammar','content','content_cache'].forEach(function(k){localStorage.removeItem('mb_'+k);});
+  toast('已清空');renderPlan();renderMemo();renderEn();
+}
+
+/* ============ 初始化 ============ */
+function init(){
+  $('#foot').textContent='宝妈勇闯自媒体 · 本地离线版';
+  $('#gistUrl').value=load('gist_url','');
+  var g=contentSrc();
+  $('#gistStatus').textContent=g&&g!=='./content.json'?('当前数据源：'+g):(g==='./content.json'?'读取站内 content.json（自动更新）':'尚未配置，将使用内置示例数据。');
+  renderPlan();renderMemo();renderEn();
+  // 尝试用缓存/默认渲染选题与热点（不强制联网）
+  var c=getContent();
+  $('#navTopic').textContent=c.inspirations.length;
+  $('#navHot').textContent=c.hotspots.length;
+  // 若已配置数据源，静默尝试刷新一次
+  if(g){refreshContent();}
+}
+init();
+</script>
+</body>
+</html>

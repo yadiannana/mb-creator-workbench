@@ -1,0 +1,57 @@
+name: 每日更新宝妈创作工作台内容
+
+on:
+  schedule:
+    # 北京早 8 点 / 下午 2 点 / 晚上 8 点 = UTC 0 点 / 6 点 / 12 点
+    - cron: "0 0,6,12 * * *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "手动触发原因"
+        required: false
+        default: "手动更新"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: pip install requests
+
+      - name: 生成内容（并尝试更新 Gist）
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          WECHAT_ALBUM_URL: ${{ secrets.WECHAT_ALBUM_URL }}
+        run: python scripts/update_content.py
+
+      # 把生成的 content.json 提交回仓库，作为站内数据源（Pages 直接可读，无需 Gist 密钥）
+      - name: 提交 content.json 到仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content.json
+          git diff --cached --quiet || git commit -m "chore: 每日内容更新 $(date +%F)"
+          git push
+
+      # 可选：把生成的 content.json 作为 artifact 保留，方便排查
+      - name: 上传生成结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-json
+          path: content.json
