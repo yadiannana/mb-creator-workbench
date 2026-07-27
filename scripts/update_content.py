@@ -236,8 +236,8 @@ def call_ai(prompt: str) -> Dict[str, Any]:
         body = {
             "model": OPENAI_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.85,
-            "max_tokens": 3500,
+        "temperature": 0.85,
+        "max_tokens": 3000,
         }
         resp = requests.post(url, headers=headers, json=body, timeout=120)
         resp.raise_for_status()
