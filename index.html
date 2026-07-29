@@ -141,6 +141,10 @@
   .danger{color:var(--pink-dark);}
   .note{background:#FFF7FA; border:1px solid var(--pink-soft); border-radius:12px; padding:10px 12px; font-size:13px; color:#7A6A70; margin-bottom:12px;}
   footer{text-align:center; font-size:11px; color:var(--muted); padding:6px 0 2px;}
+
+  .hook-text{font-size:17px;font-weight:700;color:var(--pink-dark);line-height:1.45;margin:2px 0 6px;}
+  .golden-text{font-size:14px;color:#3A2B33;background:#FFF7FA;border-left:3px solid var(--pink);padding:8px 10px;border-radius:8px;line-height:1.65;margin:2px 0 6px;}
+  .btn.copy{background:var(--pink-dark);color:#fff;}
 </style>
 </head>
 <body>
@@ -445,16 +449,50 @@ function renderTopic(){
     });
   }
 }
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){toast('已复制完整文案 ✓');},function(){fallbackCopy(t);});
+  } else { fallbackCopy(t); }
+}
+function fallbackCopy(t){
+  var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');toast('已复制完整文案 ✓');}catch(e){toast('复制失败，请手动选择');}
+  document.body.removeChild(ta);
+}
+function copyFull(it){
+  var p=[];
+  if(it.hook)p.push(it.hook);
+  if(it.golden)p.push('「'+it.golden+'」');
+  if(it.reflection)p.push(it.reflection);
+  if(it.belowTitle)p.push(it.belowTitle);
+  if(it.belowBody)p.push(it.belowBody);
+  p.push('#宝妈情感 #女性成长 #宝妈自媒体');
+  copyText(p.join('\n\n'));
+}
 function ideaCard(it,sub){
   var d=document.createElement('div');d.className='card';
-  d.innerHTML='<div class="tag">#'+esc(it.tag||'灵感')+'</div>'+
-    '<div class="card-title" style="font-size:15px">'+esc(it.title)+'</div>'+
-    '<div class="idea-desc">'+esc(it.desc)+'</div>'+
+  var hook=esc(it.hook||it.title||'');
+  var golden=esc(it.golden||'');
+  var refl=esc(it.reflection||'').replace(/\n/g,'<br>');
+  var bt=esc(it.belowTitle||'');
+  var bb=esc(it.belowBody||'');
+  d.innerHTML=
+    '<div class="tag">#'+(esc(it.tag||'灵感'))+'</div>'+
+    (hook?'<div class="card-sub">封面钩子句（12-15字）</div><div class="hook-text">'+hook+'</div>':'')+
+    (golden?'<div class="card-sub">金句原文</div><div class="golden-text">「'+golden+'」</div>':'')+
+    (refl?'<div class="card-sub">📷 图片文字（感悟）</div><div class="idea-desc">'+refl+'</div>':'')+
+    ((bt||bb)?'<div class="card-sub">⬇️ 图片下方延续正文</div>':'')+
+    (bt?'<div class="card-title" style="font-size:14px">'+bt+'</div>':'')+
+    (bb?'<div class="idea-desc">'+bb+'</div>':'')+
     '<div class="plat-btns">'+
-      '<button class="btn" onclick="goPlatform(\'douyin\')">抖音发布</button>'+
+      '<button class="btn copy">复制完整文案</button>'+
+      '<button class="btn ghost" onclick="goPlatform(\'douyin\')">抖音</button>'+
       '<button class="btn ghost" onclick="goPlatform(\'xhs\')">小红书</button>'+
       '<button class="btn ghost" onclick="goPlatform(\'bili\')">B站</button>'+
     '</div>';
+  var cbtn=d.querySelector('.btn.copy');
+  if(cbtn)cbtn.onclick=function(){copyFull(it);};
   return d;
 }
 
@@ -746,28 +784,28 @@ function defaultContent(){
   return {
     date:today(), fromGist:false,
     inspirations:[
-      {tag:'勇气',title:'当妈后我为什么要做自媒体',desc:'分享从全职妈妈到创作者的转折点，真实故事最容易引发共鸣，建议拍一段对镜头说话的口播。'},
-      {tag:'时间管理',title:'一个人带娃也能搞副业吗',desc:'用碎片时间做账号的真实记录：娃睡了我就剪视频，给同类妈妈一个可复制的样本。'},
-      {tag:'心态',title:'被说“不务正业”后我这样回',desc:'把负面评价当成流量素材，温柔坚定地表达自己，吸引同频宝妈。'},
-      {tag:'变现',title:'宝妈号第一个 100 块怎么来的',desc:'复盘第一笔收益来源（带货/商单/引流），用数据说话增强信任。'},
-      {tag:'带娃',title:'带娃间隙的 3 个拍摄机位',desc:'手机支架+厨房/客厅/推车三个场景，展示低成本也能出片。'},
-      {tag:'成长',title:'30 岁重新学一项技能是什么体验',desc:'把学英语/剪辑的过程拍成系列，陪伴感强，完播率高。'},
-      {tag:'情感',title:'写给一年前的自己',desc:'用对比式叙事（从前vs现在），戳中宝妈情绪点。'},
-      {tag:'干货',title:'新手做号别踩的 5 个坑',desc:'避坑清单类内容收藏率高，适合做封面大字标题。'},
-      {tag:'日常',title:'普通一天 vlog 也能火？',desc:'真实记录带娃+搞事业的一天，平淡但有力量。'},
-      {tag:'人设',title:'我的账号名和头像怎么定的',desc:'讲人设搭建思路，给新手做号的参考。'}
+      {tag:'杨紫',title:'杨紫这句话，治好了我的焦虑',hook:'杨紫这句话，治好了我的焦虑',golden:'杨紫说：把生活过成自己喜欢的样子，本身就是一种成功。',reflection:'我们当妈的，总先顾别人，最后才轮到自己。\n今天起，把一点时间还给自己。',belowTitle:'做自媒体，先哄好自己再哄流量',belowBody:'你状态对了，视频自然有光。宝妈做号，悦己才能长久。'},
+      {tag:'周星驰',title:'星爷的通透，30岁才看懂',hook:'星爷的通透，30岁才看懂',golden:'周星驰说：做人如果没有梦想，跟咸鱼有什么分别。',reflection:'带娃很累，但别把自己活成咸鱼。\n搞个账号，就是给自己留一扇窗。',belowTitle:'宝妈也要有做梦的权利',belowBody:'自媒体不是赚快钱，是给未来的自己留条路。开干吧各位。'},
+      {tag:'人民日报',title:'人民日报这段话，建议宝妈抄',hook:'人民日报这段话，建议宝妈抄',golden:'人民日报写道：你只管努力，剩下的交给时间。',reflection:'别盯着数据焦虑，别跟别人比。\n你发的每一条，都在长肌肉。',belowTitle:'慢一点，也是在往前走',belowBody:'今天没爆没关系，账号在生长。方向对了，就别停。'},
+      {tag:'热点歌曲',title:'这首歌一响，当妈破防了',hook:'这首歌一响，当妈破防了',golden:'歌词里唱：愿你被这世界温柔以待。',reflection:'当妈后最缺的就是温柔以待。\n自己给自己的，也算。',belowTitle:'宝妈也要被温柔对待',belowBody:'把这首歌配进带娃片段，情绪拉满，评论区全是妈妈。'},
+      {tag:'成长',title:'30岁重学技能，我从社恐变博主',hook:'30岁重学技能，我从社恐变博主',golden:'成长不是变强，是敢在不会的时候还往前走。',reflection:'学英语、学剪辑，磕磕绊绊也发出来。\n真实，比完美更动人。',belowTitle:'宝妈成长，从敢开始',belowBody:'展示学习过程本身就有流量。你敢开始，就有人敢陪你。'},
+      {tag:'变现',title:'宝妈号第一笔100块怎么来的',hook:'宝妈号第一笔100块怎么来的',golden:'赚钱不是羞耻，是努力最好的见证。',reflection:'金额不大，却让我踏实：普通妈妈也能行。\n勤快+热爱+行动=开花结果。',belowTitle:'宝妈变现，从敢谈钱开始',belowBody:'别羞于提收益，你的真实，就是别人的底气。'},
+      {tag:'情感',title:'当妈后我才懂，什么叫大人',hook:'当妈后我才懂，什么叫大人',golden:'所谓大人，就是把情绪调成静音，继续走。',reflection:'但做自媒体，可以重新把声音打开。\n你的情绪，有人想听。',belowTitle:'把情绪说出来，不丢人',belowBody:'拍一条「今天有点丧」的口播，反而最圈粉。'},
+      {tag:'日常',title:'普通一天vlog，也能火？',hook:'普通一天vlog，也能火？',golden:'平凡的日子，认真过就有光。',reflection:'带娃+搞事业的一天，平淡但有力量。\n别人羡慕的，正是你的日常。',belowTitle:'把日常拍成连续剧',belowBody:'固定栏目感，让粉丝每天回来找你。'},
+      {tag:'人设',title:'我的账号名和头像怎么定的',hook:'我的账号名和头像怎么定的',golden:'名字是信任的第一印象。',reflection:'别用「宝妈XXX」这么普通。\n叫得响、记得住，才有人搜得到你。',belowTitle:'人设从名字开始',belowBody:'好名字自带搜索流量，重做一遍头像和简介。'},
+      {tag:'避坑',title:'新手做号别踩的5个坑',hook:'新手做号别踩的5个坑',golden:'少走弯路，就是最快的路。',reflection:'别一上来买设备、别日更硬凑、别抄袭。\n先发一条，比想一百条有用。',belowTitle:'先完成，再完美',belowBody:'收藏这5条，照着做，账号稳稳起。'}
     ],
     insights:[
-      {tag:'坚持',title:'慢一点也没关系',desc:'自媒体不是百米冲刺。关联自媒体：今天没爆，但账号在长肌肉，方向对了就别停。'},
-      {tag:'接纳',title:'不完美也可以开始',desc:'第一条视频很糙？关联自媒体：真实比精致更动人，先完成再完美。'},
-      {tag:'专注',title:'少看别人，多看自己',desc:'焦虑来自比较。关联自媒体：盯住自己的数据曲线，每周进步一点点就赢。'},
-      {tag:'热爱',title:'热爱是熬过瓶颈的光',desc:'关联自媒体：把带娃的琐碎变成内容灵感，热爱会替你续航。'},
-      {tag:'成长',title:'妈妈也可以是学习者',desc:'我在学英语、学剪辑。关联自媒体：展示学习过程本身就有流量。'},
-      {tag:'勇气的',title:'怕被熟人看到怎么办',desc:'关联自媒体：把羞耻感拍出来，反而圈粉，真诚是最高级的运营。'},
-      {tag:'平衡',title:'带娃和搞事业不是对立',desc:'关联自媒体：用的时间块管理，给宝妈一个“我也可以”的信念。'},
-      {tag:'价值',title:'你经历的就是别人的答案',desc:'关联自媒体：普通妈妈的日常，对另一个妈妈可能就是救命稻草。'},
-      {tag:'长期',title:'做难而正确的事',desc:'关联自媒体：不追热点投机，沉淀人设，时间会奖励长期主义者。'},
-      {tag:'感恩',title:'谢谢愿意听我说话的你',desc:'关联自媒体：定期和粉丝“对话”，把账号做成有温度的小圈子。'}
+      {tag:'坚持',title:'慢一点也没关系呀，妈妈',hook:'慢一点也没关系呀，妈妈',golden:'人民日报：你只管努力，剩下的交给时间。',reflection:'自媒体不是百米冲刺，是马拉松。\n今天没爆，账号也在长肌肉。',belowTitle:'方向对了，就别停',belowBody:'每周进步一点点，时间会奖励长期主义。'},
+      {tag:'接纳',title:'不完美也能先开始呀',hook:'不完美也能先开始呀',golden:'接纳普通，不是躺平，是清楚自己是谁还敢往前走。',reflection:'第一条视频很糙？真实比精致更动人。\n先完成，再完美。',belowTitle:'先完成，再完美',belowBody:'发出去的第一条，胜过脑子里的一百条。'},
+      {tag:'专注',title:'少看别人多看看自己',hook:'少看别人多看看自己',golden:'真正的清醒，是跳过情绪直接行动。',reflection:'焦虑大多来自比较。\n盯住自己的数据曲线，别盯别人的热闹。',belowTitle:'把目光收回到自己',belowBody:'每周进步一点就赢，别人的爆款与你无关。'},
+      {tag:'热爱',title:'热爱是熬过瓶颈的光呀',hook:'热爱是熬过瓶颈的光呀',golden:'把生活过成自己喜欢的样子，本身就是成功。',reflection:'把带娃的琐碎变成内容灵感。\n热爱会替你续航。',belowTitle:'用热爱给账号充电',belowBody:'你喜欢的，自然会吸引同频的人。'},
+      {tag:'成长',title:'妈妈也能当个学习者',hook:'妈妈也能当个学习者',golden:'没有白走的路，每一步都算数。',reflection:'我在学英语、学剪辑。\n展示学习过程，本身就有流量。',belowTitle:'宝妈也可以是学生',belowBody:'你敢学，就有人敢陪你一起成长。'},
+      {tag:'勇气',title:'怕被熟人看到怎么办呀',hook:'怕被熟人看到怎么办呀',golden:'真诚，是最高级的运营。',reflection:'把羞耻感拍出来，反而圈粉。\n你不是一个人。',belowTitle:'真诚比完美更圈粉',belowBody:'敢露怯，才敢被爱。做自己最省力。'},
+      {tag:'平衡',title:'带娃和搞事业不对立',hook:'带娃和搞事业不对立',golden:'允许自己慢慢来，是成年人最高级的清醒。',reflection:'用时间块管理，给宝妈一个「我也可以」。\n带娃和搞事业，能共存。',belowTitle:'平衡不是平均，是节奏',belowBody:'找到你的节奏，一天也能做很多事。'},
+      {tag:'价值',title:'你经历的就是别人答案',hook:'你经历的就是别人答案',golden:'你经历的就是别人的答案。',reflection:'普通妈妈的日常，对另一个妈妈可能是救命稻草。\n你的碎碎念有用。',belowTitle:'别小看你的日常',belowBody:'分享出来，你就成了别人的光。'},
+      {tag:'长期',title:'做难而正确的事呀妈',hook:'做难而正确的事呀妈',golden:'时间会奖励长期主义者。',reflection:'不追热点投机，沉淀人设。\n难而正确的事，越走越宽。',belowTitle:'长期主义，是宝妈的底气',belowBody:'今天埋的种子，明年会开花。'},
+      {tag:'感恩',title:'谢谢愿意听我说话的你',hook:'谢谢愿意听我说话的你',golden:'被看见，是普通人最温柔的幸运。',reflection:'定期和粉丝「对话」，把账号做成有温度的小圈子。\n你不是在做号，是在交朋友。',belowTitle:'把粉丝当闺蜜',belowBody:'真诚的关系，才是最稳的流量。'}
     ],
     hotspots:[
       {hot:'某明星带娃综艺爆了',angle:'宝妈视角解读：明星带娃vs普通妈妈带娃的差距与共鸣点',copy:'同样是带娃，差距咋就这么大？但普通妈妈的韧性更戳人。',imitate:'用“明星带娃名场面+我的带娃真实瞬间”对比剪辑，结尾点题：每个妈妈都在发光。'},
