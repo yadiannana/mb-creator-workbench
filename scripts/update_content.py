@@ -82,14 +82,14 @@ DEFAULT_STYLE = """例1（周星驰/电影热点）:
 ② 金句（正文，原文原话，注明出处）：
    用明星发言 / 热点歌曲歌词 / 人民日报式人生感悟的原句。例：杨紫在采访里说："把生活过成自己喜欢的样子，本身就是一种成功。"
 
-③ 感悟（图片上的几句话，2-4 句，每句一行，闺蜜语气，戳中宝妈情绪，能截图转发）：
+③ 感悟（图片上的几句话，2-3 句，每句一行，闺蜜语气，戳中宝妈情绪，能截图转发）：
    原来我们拼命追赶别人的时候，最该哄的是自己。
    做自媒体也是，先把日子过顺了，镜头里的松弛感才骗不了人。
 
 ④ 延续性标题（图片下方，承上启下）：
    宝妈做自媒体，别急着证明给谁看
 
-⑤ 延续性正文（图片下方，2-4 句，落到宝妈做自媒体的共鸣/成长/变现）：
+⑤ 延续性正文（图片下方，2-3 句，落到宝妈做自媒体的共鸣/成长/变现）：
    你发的每一条，都是在替千万个普通妈妈说话。先完成再完美，今天这条发出去，就比昨天离变现近一步。
 
 话题：#宝妈情感 #女性成长 #宝妈自媒体"""
@@ -243,9 +243,9 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
       "title": "封面钩子句，12-15字，与 hook 一致",
       "hook": "第一句 12-15 字，带钩子（痛点/反差/悬念/数字）",
       "golden": "正文金句：明星发言/歌曲歌词/人民日报金句的原文原话，注明出处",
-      "reflection": "图片上的几句话感悟，2-4 句，每句一行，闺蜜语气，戳中宝妈情绪，可截图转发",
+      "reflection": "图片上的几句话感悟，2-3 句，每句一行，闺蜜语气，戳中宝妈情绪，可截图转发",
       "belowTitle": "图片下方延续性标题（承上启下）",
-      "belowBody": "图片下方延续性正文，2-4 句，落到宝妈做自媒体的共鸣/成长/变现"
+      "belowBody": "图片下方延续性正文，2-3 句，落到宝妈做自媒体的共鸣/成长/变现"
     }}
   ],
   "insights": [
@@ -254,9 +254,9 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
       "title": "封面钩子句，12-15字，与 hook 一致",
       "hook": "第一句 12-15 字，带钩子",
       "golden": "人生感悟金句原文（偏人民日报式/通透语录，注明出处）",
-      "reflection": "图片上的几句话感悟，2-4 句，每句一行",
+      "reflection": "图片上的几句话感悟，2-3 句，每句一行",
       "belowTitle": "图片下方延续性标题",
-      "belowBody": "图片下方延续性正文，2-4 句，关联宝妈勇闯自媒体"
+      "belowBody": "图片下方延续性正文，2-3 句，关联宝妈勇闯自媒体"
     }}
   ],
   "hotspots": [
@@ -272,12 +272,80 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
 
 要求：
 1. inspirations 10 条、insights 10 条、hotspots 10 条、math 10 条。
-2. 每条 inspirations / insights 都必须严格包含 hook、golden、reflection、belowTitle、belowBody 五个字段，且 hook 必须 12-15 字并带钩子；golden 必须是原文原话（不要自己编造名言，尽量用真实明星/歌曲/人民日报语录）；reflection 是图片上的文字（2-4 句分行）；belowTitle+belowBody 是图片下方延续性正文。
+2. 每条 inspirations / insights 都必须严格包含 hook、golden、reflection、belowTitle、belowBody 五个字段，且 hook 必须 12-15 字并带钩子；golden 必须是原文原话（不要自己编造名言，尽量用真实明星/歌曲/人民日报语录）；reflection 是图片上的文字（2-3 句分行）；belowTitle+belowBody 是图片下方延续性正文。
 3. 每天必须结合上面的「今日热点」事实热度来选题，不要空谈鸡汤；素材可来自明星发言、热点歌曲、人民日报感悟。
 4. hotspots 的 copy 必须是能直接做封面的金句（带情绪钩子），imitate 给出口播结构建议。
-5. 所有内容都要落到「宝妈做自媒体」——情绪共鸣、成长、或怎么赚钱。
+5. 每条字段精炼、控制字数，避免冗长；所有内容都要落到「宝妈做自媒体」——情绪共鸣、成长、或怎么赚钱。
 6. math 是小学口算水平，10 题，混合加减乘，不要重复。
 7. 只输出 JSON，不要任何其他文字。"""
+
+def needs_closing(s):
+    """根据已出现的 { [ 与未闭合字符串，返回应补齐的结尾字符。"""
+    stack = []
+    in_str = False
+    esc = False
+    for ch in s:
+        if esc:
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in "[{":
+            stack.append(ch)
+        elif ch == "}":
+            if stack and stack[-1] == "{":
+                stack.pop()
+        elif ch == "]":
+            if stack and stack[-1] == "[":
+                stack.pop()
+    suffix = '"' if in_str else ""
+    for op in reversed(stack):
+        suffix += "]" if op == "[" else "}"
+    return suffix
+
+
+def repair_json(raw):
+    """尽量从被截断/带代码围栏的模型输出中解析出 JSON。"""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        m = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw)
+        if m:
+            raw = m.group(1)
+        else:
+            raw = raw.replace("```json", "").replace("```", "").strip()
+    s = raw.find("{")
+    if s < 0:
+        return {}
+    raw = raw[s:]
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+    cand = raw
+    for _ in range(2000):
+        cand = cand.rstrip().rstrip(",").rstrip()
+        if not cand:
+            break
+        try:
+            return json.loads(cand)
+        except Exception:
+            pass
+        cut = max(cand.rfind(","), cand.rfind("}"), cand.rfind("]"))
+        if cut <= 0:
+            break
+        cand = cand[:cut]
+        try:
+            return json.loads(cand + needs_closing(cand))
+        except Exception:
+            pass
+    return {}
+
 
 def call_ai(prompt: str) -> Dict[str, Any]:
     if not OPENAI_API_KEY:
@@ -289,26 +357,21 @@ def call_ai(prompt: str) -> Dict[str, Any]:
         body = {
             "model": OPENAI_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.85,
-        "max_tokens": 3000,
+            "temperature": 0.85,
+            "max_tokens": 8000,
         }
-        resp = requests.post(url, headers=headers, json=body, timeout=120)
+        resp = requests.post(url, headers=headers, json=body, timeout=180)
         resp.raise_for_status()
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
-        # 提取 JSON 部分
-        raw = content.strip()
-        if raw.startswith("```"):
-            m = re.search(r"```(?:json)?\n([\s\S]+?)\n```", raw)
-            if m:
-                raw = m.group(1)
-            else:
-                raw = raw.replace("```json", "").replace("```", "").strip()
-        return json.loads(raw)
+        parsed = repair_json(content)
+        if not isinstance(parsed, dict) or not parsed.get("inspirations"):
+            log("[AI] 返回内容无法解析为有效 JSON，使用兜底数据")
+            return {}
+        return parsed
     except Exception as e:
         log(f"[AI] 调用或解析失败: {e}")
         return {}
-
 
 def fallback_data(hot_items: List[Dict[str, str]]) -> Dict[str, Any]:
     """当 AI 或网络失败时，用热榜原始标题 + 固定人生感悟生成一份可用兜底（新结构）。"""
