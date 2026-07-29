@@ -241,7 +241,7 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
     {{
       "tag": "标签（如 杨紫/周星驰/热点歌曲/人民日报/情感/成长）",
       "title": "封面钩子句，12-15字，与 hook 一致",
-      "hook": "第一句 12-15 字，带钩子（痛点/反差/悬念/数字）",
+      "hook": "第一句必须恰好 12-15 个汉字（含标点不超过 15），带钩子（痛点/反差/悬念/数字），务必逐字数清",
       "golden": "正文金句：明星发言/歌曲歌词/人民日报金句的原文原话，注明出处",
       "reflection": "图片上的几句话感悟，2-3 句，每句一行，闺蜜语气，戳中宝妈情绪，可截图转发",
       "belowTitle": "图片下方延续性标题（承上启下）",
@@ -252,7 +252,7 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
     {{
       "tag": "标签",
       "title": "封面钩子句，12-15字，与 hook 一致",
-      "hook": "第一句 12-15 字，带钩子",
+      "hook": "第一句必须恰好 12-15 个汉字，带钩子，务必逐字数清",
       "golden": "人生感悟金句原文（偏人民日报式/通透语录，注明出处）",
       "reflection": "图片上的几句话感悟，2-3 句，每句一行",
       "belowTitle": "图片下方延续性标题",
@@ -272,7 +272,7 @@ def build_prompt(hot_items: List[Dict[str, str]], wechat_text: str) -> str:
 
 要求：
 1. inspirations 10 条、insights 10 条、hotspots 10 条、math 10 条。
-2. 每条 inspirations / insights 都必须严格包含 hook、golden、reflection、belowTitle、belowBody 五个字段，且 hook 必须 12-15 字并带钩子；golden 必须是原文原话（不要自己编造名言，尽量用真实明星/歌曲/人民日报语录）；reflection 是图片上的文字（2-3 句分行）；belowTitle+belowBody 是图片下方延续性正文。
+2. 每条 inspirations / insights 都必须严格包含 hook、golden、reflection、belowTitle、belowBody 五个字段，且 hook 必须恰好 12-15 个汉字（请逐字数清，不足 12 或超过 15 视为不合格）并带钩子；golden 必须是原文原话（不要自己编造名言，尽量用真实明星/歌曲/人民日报语录）；reflection 是图片上的文字（2-3 句分行）；belowTitle+belowBody 是图片下方延续性正文。
 3. 每天必须结合上面的「今日热点」事实热度来选题，不要空谈鸡汤；素材可来自明星发言、热点歌曲、人民日报感悟。
 4. hotspots 的 copy 必须是能直接做封面的金句（带情绪钩子），imitate 给出口播结构建议。
 5. 每条字段精炼、控制字数，避免冗长；所有内容都要落到「宝妈做自媒体」——情绪共鸣、成长、或怎么赚钱。
